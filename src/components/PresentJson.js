@@ -1,16 +1,10 @@
-import CompartmentData from './CompartmentData';
+import Tree from './Tree';
 
 const PresentJson = ({number, data}) => {
     return (
         <div>
             <center><h1>Mock Scenario {number}</h1></center>
-            <div className="card">
-                {"{"} <br/>
-                  {"nodes:["} <br/>
-                    <CompartmentData compartments={data} /> <br/>
-                  {"]"} <br/>
-                {"}"}
-            </div>
+            <Tree compartments={data} /> <br/>
         </div>
     );
 
