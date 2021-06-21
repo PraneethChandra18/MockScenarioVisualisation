@@ -1,12 +1,83 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
-
-const Tree = ({compartments}) => {
+const Tree = ({data}) => {
 
     const ref = useRef();
 
+    var adjacencyList = {};
+    var resourcesList = {};
+
+    function createAdjacencyList() {
+
+        var vcnList = [];
+        var edgesList = data.edges;
+
+        if(edgesList != null) {
+            edgesList.forEach((edge) => {
+                if(edge.source.substring(5,8) === "VCN") vcnList.push(edge.source);
+                adjacencyList[edge.source] = edge.target;
+            });
+        }
+
+        adjacencyList["VCN"] = vcnList;
+    }
+
+    function dfs(source) {
+
+        var obj = {};
+        obj["id"] = source;
+
+        var resourceChildren = [];
+        if(adjacencyList[source] != null) {
+            adjacencyList[source].forEach((source) => {
+                resourceChildren.push(dfs(source));
+            });
+        }
+        obj["children"] = resourceChildren;
+        return obj;
+    }
+
+    function updateData(d) {
+
+        var resourceChildren = [];
+
+        if(d.resources != null) {
+            if(d.resources[0] != null) {
+                d.resources[0].items.forEach((vcn) => {
+                    if(resourcesList[vcn]) {
+                        resourceChildren.push(resourcesList[vcn]);
+                    }
+                });
+            }
+        }
+
+        if(d.children) {
+            d.children.forEach(updateData);
+        }
+
+        resourceChildren.forEach((child) => {
+            d.children.push(child);
+        });
+    }
+
+    function manipulateData() {
+
+        createAdjacencyList();
+        adjacencyList["VCN"].forEach((source) => {
+            resourcesList[source] = dfs(source);
+        });
+
+        updateData(data.nodes[0]);
+
+        console.log(data);
+
+        return data.nodes;
+    }
+
     useEffect(() => {
+
+        var compartments = manipulateData();
 
         var margin = {top: 20, right: 90, bottom: 30, left: 90},
             width = 960 - margin.left - margin.right,
@@ -78,7 +149,7 @@ const Tree = ({compartments}) => {
                     d.x = window.innerWidth / 2;
                     d.x0 = window.innerWidth / 2;
                 }
-                d.y = d.depth * 180
+                d.y = d.depth * 100;
             });
 
             var node = svg.selectAll('g.node')
@@ -100,13 +171,13 @@ const Tree = ({compartments}) => {
 
             nodeEnter.append('text')
                   .attr("dy", ".35em")
-                  .attr("x", function(d) {
+                  .attr("y", function(d) {
                       return d.children || d._children ? -10 : 10;
                   })
                   .attr("text-anchor", function(d) {
-                      return d.children || d._children ? "end" : "start";
+                      return d.children || d._children ? "bottom" : "top";
                   })
-                  .text(function(d) { return d.data.name; });
+                  .text(function(d) { return d.data.id; });
 
             var nodeUpdate = nodeEnter.merge(node);
 
@@ -185,7 +256,7 @@ const Tree = ({compartments}) => {
               }
         }
 
-    }, [compartments]);
+    }, [data]);
 
     return (
         <div className="container-data" ref={ref} />

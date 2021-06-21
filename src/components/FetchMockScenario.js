@@ -1,15 +1,16 @@
 import React from 'react';
 import PresentJson from './PresentJson';
+import MockScenarioData from './MockScenarioData';
 import * as d3 from 'd3';
 
 const FetchMockScenario = (props) => {
-    const [mockScenarioData, setMockScenarioData] = React.useState([]);
+    const [mockScenarioData, setMockScenarioData] = React.useState({});
     const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
         const id = props.match.params.id;
         d3.json('http://127.0.0.1:8080/MockScenario/'+id).then((d) => {
-            setMockScenarioData(d.nodes);
+            setMockScenarioData(d);
             setLoading(false);
         })
         .catch((error) => {

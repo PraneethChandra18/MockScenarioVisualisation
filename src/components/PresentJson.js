@@ -4,7 +4,7 @@ const PresentJson = ({number, data}) => {
     return (
         <div>
             <center><h1>Mock Scenario {number}</h1></center>
-            <Tree compartments={data} /> <br/>
+            <Tree data={data} /> <br/>
         </div>
     );
 
