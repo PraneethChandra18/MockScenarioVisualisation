@@ -15,14 +15,11 @@ const Tree2 = ({data}) => {
 
     useEffect(() => {
 
-        const MIN_ZOOM = 0.5;
-        const MAX_ZOOM = 2.0;
-        const ZOOM     = d3.zoom()
-                           .scaleExtent([MIN_ZOOM, MAX_ZOOM])
-                           .on("zoom", zoomed);
-
-        const FRAME_HEIGHT = 500;
-        const FRAME_WIDTH = 500;
+//        const MIN_ZOOM = 0.5;
+//        const MAX_ZOOM = 2.0;
+//        const ZOOM     = d3.zoom()
+//                           .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+//                           .on("zoom", zoomed);
 
         var adjacencyList = {};
         var resourcesList = {};
@@ -100,14 +97,21 @@ const Tree2 = ({data}) => {
             var obj = {nodesPerLevel : []}
             calculateNodesPerLevel(d,0,obj);
 
-            var maxi = 1;
+            obj.nodesPerLevel = obj.nodesPerLevel.slice(1);
+
+            var maxi = 0;
             obj.nodesPerLevel.forEach((n) => {
                 if(n > maxi) {
                     maxi = n;
                 }
             });
 
-            d.size = [Math.max(maxi*50,300) ,300]
+            if(maxi === 0) {
+                d.size = [100,100];
+            }
+            else {
+                d.size = [Math.max(maxi*50,300) ,300]
+            }
 
             if(d.children) {
                 d.children.forEach(assignNodeSizes);
@@ -136,6 +140,12 @@ const Tree2 = ({data}) => {
             duration = 750,
             root;
 
+        var div = d3.select(ref.current).append("div")
+                             .attr("class", "tooltip")
+                             .style("display", "inline")
+                             .style("position", "fixed")
+                             .style("opacity", 0);
+
         var svg = d3.select(ref.current)
                     .append("svg")
                     .attr("width", 10000)
@@ -155,9 +165,6 @@ const Tree2 = ({data}) => {
 
         root.x0 = window.innerWidth / 2;
         root.y0 = 10;
-
-        root.x = window.innerWidth / 2;
-        root.y = 10;
 
         collapse(root);
 
@@ -330,7 +337,8 @@ const Tree2 = ({data}) => {
                 return x.resourceChildren;
             });
 
-            var frame = d3.select("g.nodeData" + "#" + d.id.replaceAll(".", "\\."));
+            var requiredNodeId = "#" + d.id.replaceAll(".", "\\.");
+            var frame = d3.select("g.nodeData" + requiredNodeId);
 
             update(tree, innerRoot, frame);
 
@@ -356,7 +364,7 @@ const Tree2 = ({data}) => {
             var nodeEnter = node.enter().append('g')
                   .attr('class', 'node')
                   .attr("transform", function(d) {
-                    return "translate(" + source.x0 + "," + source.y0 + ")";
+                    return "translate(" + source.x + "," + source.y + ")";
                   })
 
             nodeEnter.append("image")
@@ -367,7 +375,19 @@ const Tree2 = ({data}) => {
                      .attr("width",20)
                      .attr("height",20)
                      .attr("x", -10)
-                     .attr("y", -10);
+                     .attr("y", -10)
+                     .on("mouseover", function(event,d) {
+                        div.transition()
+                           .duration(200)
+                           .style("opacity", .9);
+
+                        div.html(d.data.id)
+                           .style("left", (event.pageX) + "px")
+                           .style("top", (event.pageY - 28) + "px");
+                     })
+                     .on('mouseout', d => {
+                       div.transition() .duration(500) .style("opacity", 0);
+                     });
 
 //            nodeEnter.append('text')
 //                  .attr("dy", ".35em")
@@ -390,12 +410,12 @@ const Tree2 = ({data}) => {
 //            nodeUpdate.select("text")
 //                  .style("fill-opacity", 1);
 
-            var nodeExit = node.exit().transition()
-                  .duration(duration)
-                  .attr("transform", function(d) {
-                      return "translate(" + source.x + "," + source.y + ")";
-                  })
-                  .remove();
+            node.exit().transition()
+                      .duration(duration)
+                      .attr("transform", function(d) {
+                          return "translate(" + source.x + "," + source.y + ")";
+                      })
+                      .remove();
 
 //            nodeExit.select('text')
 //                .style('fill-opacity', 1e-6);
@@ -406,7 +426,7 @@ const Tree2 = ({data}) => {
             var linkEnter = link.enter().insert('path', "g")
                   .attr("class", "link")
                   .attr('d', function(d) {
-                     var o = {x: source.x0, y: source.y0}
+                     var o = {x: source.x, y: source.y}
                      return diagonal(o,o)
                   })
                   .attr("stroke","black");
@@ -432,13 +452,6 @@ const Tree2 = ({data}) => {
                   })
                   .remove();
 
-
-
-            nodes.forEach(function(d){
-                d.x0 = d.x;
-                d.y0 = d.y;
-              });
-
             function diagonal(s, d) {
 
                var path = `M ${s.x} ${s.y}
@@ -448,12 +461,13 @@ const Tree2 = ({data}) => {
               }
         }
 
-        svg.call(ZOOM);
 
-        function zoomed(event) {
-            const {transform} = event;
+//        svg.call(ZOOM);
+
+//        function zoomed(event) {
+//            const {transform} = event;
 //            gCanvas.attr("transform", transform);
-        }
+//        }
 
     }, [data]);
 

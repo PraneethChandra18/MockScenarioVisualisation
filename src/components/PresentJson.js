@@ -1,4 +1,3 @@
-import Tree from './Tree';
 import Tree2 from './Tree2';
 
 const PresentJson = ({number, data}) => {
