@@ -1,6 +1,5 @@
 import React from 'react';
 import PresentJson from './PresentJson';
-import MockScenarioData from './MockScenarioData';
 import * as d3 from 'd3';
 
 const FetchMockScenario = (props) => {

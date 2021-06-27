@@ -1,87 +1,83 @@
 import React, { useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 
+import CompartmentImage from '../assets/Compartment.svg';
+import VCNImage from '../assets/VCN.svg';
+import SubnetImage from '../assets/Subnet.svg';
+import InstanceImage from '../assets/Instance.svg';
+import BlockVolumeImage from '../assets/BlockVolume.svg';
+import NICImage from '../assets/NIC.svg';
+
 const Tree = ({data}) => {
 
     const ref = useRef();
 
-    var adjacencyList = {};
-    var resourcesList = {};
+    useEffect(() => {
+        var adjacencyList = {};
+        var resourcesList = {};
 
-    function createAdjacencyList() {
+        function createAdjacencyList() {
 
-        var vcnList = [];
-        var edgesList = data.edges;
+            var vcnList = [];
+            var edgesList = data.edges;
 
-        if(edgesList != null) {
-            edgesList.forEach((edge) => {
-                if(edge.source.substring(5,8) === "VCN") vcnList.push(edge.source);
-                adjacencyList[edge.source] = edge.target;
-            });
-        }
-
-        adjacencyList["VCN"] = vcnList;
-    }
-
-    function dfs(source) {
-
-        var obj = {};
-        obj["id"] = source;
-
-        var resourceChildren = [];
-        if(adjacencyList[source] != null) {
-            adjacencyList[source].forEach((source) => {
-                resourceChildren.push(dfs(source));
-            });
-        }
-        obj["children"] = resourceChildren;
-        return obj;
-    }
-
-    function updateData(d) {
-
-        var resourceChildren = [];
-
-        if(d.resources != null) {
-            if(d.resources[0] != null) {
-                d.resources[0].items.forEach((vcn) => {
-                    if(resourcesList[vcn]) {
-                        resourceChildren.push(resourcesList[vcn]);
-                    }
+            if(edgesList != null) {
+                edgesList.forEach((edge) => {
+                    if(edge.source.substring(5,8) === "VCN") vcnList.push(edge.source);
+                    adjacencyList[edge.source] = edge.target;
                 });
+            }
+
+            adjacencyList["VCN"] = vcnList;
+        }
+
+        function dfs(source) {
+
+            var obj = {};
+            obj["id"] = source;
+
+            var resourceChildren = [];
+            if(adjacencyList[source] != null) {
+                adjacencyList[source].forEach((source) => {
+                    resourceChildren.push(dfs(source));
+                });
+            }
+            obj["children"] = resourceChildren;
+            return obj;
+        }
+
+        function updateData(d) {
+
+            if(d.resources != null) {
+                if(d.resources[0] != null) {
+                    d.resources[0].items.forEach((vcn) => {
+                        if(resourcesList[vcn]) {
+                            d.children.push(resourcesList[vcn]);
+                        }
+                    });
+                }
+            }
+
+            if(d.children) {
+                d.children.forEach(updateData);
             }
         }
 
-        if(d.children) {
-            d.children.forEach(updateData);
+        function manipulateData() {
+
+            createAdjacencyList();
+            adjacencyList["VCN"].forEach((source) => {
+                resourcesList[source] = dfs(source);
+            });
+
+            updateData(data.nodes[0]);
+
+            return data.nodes;
         }
-
-        resourceChildren.forEach((child) => {
-            d.children.push(child);
-        });
-    }
-
-    function manipulateData() {
-
-        createAdjacencyList();
-        adjacencyList["VCN"].forEach((source) => {
-            resourcesList[source] = dfs(source);
-        });
-
-        updateData(data.nodes[0]);
-
-        console.log(data);
-
-        return data.nodes;
-    }
-
-    useEffect(() => {
 
         var compartments = manipulateData();
 
-        var margin = {top: 20, right: 90, bottom: 30, left: 90},
-            width = 960 - margin.left - margin.right,
-            height = 500 - margin.top - margin.bottom;
+        var margin = {top: 20, right: 90, bottom: 30, left: 90};
 
         var i = 0,
             duration = 750,
@@ -136,6 +132,15 @@ const Tree = ({data}) => {
             update(d);
         }
 
+        function showImage(d) {
+            if(d.includes("compartment")) return CompartmentImage;
+            else if(d.includes("VCN")) return VCNImage;
+            else if(d.includes("subnet")) return SubnetImage;
+            else if(d.includes("instance")) return InstanceImage;
+            else if(d.includes("blockVolume")) return BlockVolumeImage;
+            else return NICImage;
+        }
+
         function update(source) {
 
             var data = tree(root);
@@ -144,7 +149,7 @@ const Tree = ({data}) => {
                 links = data.descendants().slice(1);
 
             nodes.forEach(function(d,i){
-                if(i==0)
+                if(i===0)
                 {
                     d.x = window.innerWidth / 2;
                     d.x0 = window.innerWidth / 2;
@@ -159,10 +164,15 @@ const Tree = ({data}) => {
                   .attr('class', 'node')
                   .attr("transform", function(d) {
                     return "translate(" + source.x0 + "," + source.y0 + ")";
-                })
+                  })
                 .on('click', click);
 
-            nodeEnter.append('circle')
+            nodeEnter.append("image")
+                     .attr("xlink:href", function(d) {
+                        return showImage(d.data.id);
+                     })
+                     .attr("width",30)
+                     .attr("height",30)
                   .attr('class', 'node')
                   .attr('r', 1e-6)
                   .style("fill", function(d) {
@@ -172,7 +182,7 @@ const Tree = ({data}) => {
             nodeEnter.append('text')
                   .attr("dy", ".35em")
                   .attr("y", function(d) {
-                      return d.children || d._children ? -10 : 10;
+                      return d.children || d._children ? -10 : -10;
                   })
                   .attr("text-anchor", function(d) {
                       return d.children || d._children ? "bottom" : "top";
@@ -232,7 +242,7 @@ const Tree = ({data}) => {
                   })
                   .attr("stroke","black");
 
-            var linkExit = link.exit().transition()
+            link.exit().transition()
                   .duration(duration)
                   .attr('d', function(d) {
                     var o = {x: source.x, y: source.y}
